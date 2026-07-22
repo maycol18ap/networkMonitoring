@@ -1,7 +1,14 @@
 import sys
 import threading
 import time
+from datetime import datetime
 from scapy.all import sniff, DNS, DNSQR, conf
+from src.database.db_manager import inicializar_db, guardar_sesion, guardar_dispositivos
+from src.core.scanner import escanear_red
+
+# 0. Inicializar la Base de Datos
+inicializar_db()
+fecha_inicio = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 print("=" * 60)
 print("     VERSION 1.2: MONITOR PRO (CONTADOR + DOMINIOS)")
@@ -29,10 +36,10 @@ ejecutando = True
 def procesar_paquete(packet):
     global total_bytes, sitios_visitados
     
-    # Operación ultra rápida: Sumar tamaño bruto de todo el tráfico
+    # Sumar tamaño bruto
     total_bytes += len(packet)
     
-    # Operación secundaria: Si es DNS, extraemos el dominio
+    # Extraer dominios si es consulta DNS
     if packet.haslayer(DNS) and packet.getlayer(DNS).qr == 0:
         dns_layer = packet.getlayer(DNSQR)
         if dns_layer:
@@ -41,35 +48,35 @@ def procesar_paquete(packet):
                 sitios_visitados[dominio] = sitios_visitados.get(dominio, 0) + 1
 
 def bucle_sniff():
-    """Este hilo se encarga únicamente de capturar red a baja escala"""
+    """Hilo secundario para captura de paquetes a bajo nivel"""
     global ejecutando
-    # Sniffer ligero. Detiene su captura si ejecutando pasa a False
     sniff(iface=iface_seleccionada, prn=procesar_paquete, store=False, stop_filter=lambda p: not ejecutando)
 
-# 2. Lanzamos la captura en un hilo secundario (en segundo plano)
+# 2. Lanzamos la captura en segundo plano
 hilo_red = threading.Thread(target=bucle_sniff, daemon=True)
 hilo_red.start()
 
 print("\n[🚀] Captura iniciada con éxito.")
-print("[💡] Para ver el reporte final sin romper el programa, escribe la palabra 'reporte' o 'salir' y dale Enter.\n")
+print("[💡] Para detener el monitoreo y guardar datos, presiona Ctrl + C.\n")
 
-# 3. El hilo principal se queda esperando una entrada de texto normal y actualizando la interfaz
+# 3. Bucle principal de actualización visual
 try:
     while ejecutando:
         total_mb = total_bytes / (1024 * 1024)
         print(f"\r[🔥] CONSUMO TOTAL: {total_mb:.4f} MB | Sitios web detectados: {len(sitios_visitados)}", end="")
-        
-        # Un pequeño truco no bloqueante para chequear la consola
-        time.sleep(0.5) 
+        time.sleep(0.5)
 except KeyboardInterrupt:
-    # Por si acaso aún intentas usar Ctrl+C
-    pass
+    print("\n\nDeteniendo monitoreo...")
 
-# Al romper el bucle (escribiendo texto), procesamos el cierre
-print("\n\n" + "=" * 60)
+# --- PROCESO DE CIERRE Y GUARDADO DE SESIÓN ---
+ejecutando = False
+fecha_fin = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+total_mb = round(total_bytes / (1024 * 1024), 2)
+
+print("\n" + "=" * 60)
 print("                REPORTE DE SESIÓN FINAL")
 print("=" * 60)
-print(f"[📊] Consumo Neto Wi-Fi: {total_bytes / (1024 * 1024):.2f} MB")
+print(f"[📊] Consumo Neto Wi-Fi: {total_mb} MB")
 print(f"[✨] Sitios web únicos registrados: {len(sitios_visitados)}")
 print("\n[🌐] TOP 10 Dominios consultados:")
 
@@ -81,5 +88,23 @@ else:
     print("   No se registraron sitios fuera del ecosistema base de Windows.")
 print("=" * 60)
 
-# Apagamos el hilo de red limpiamente
-ejecutando = False
+# 4. Guardar consumo en SQLite
+if total_mb > 0 or sitios_visitados:
+    guardar_sesion(fecha_inicio, fecha_fin, total_mb, sitios_visitados)
+
+# --- 5. ESCANEO Y GUARDADO DE DISPOSITIVOS EN LA RED ---
+dispositivos = escanear_red()
+fecha_escaneo = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+print("\n" + "=" * 50)
+print("     DISPOSITIVOS DETECTADOS EN LA RED LOCAL")
+print("=" * 50)
+for d in dispositivos:
+    print(f" 📱 IP: {d['ip']:<15} | MAC: {d['mac']}")
+print("=" * 50)
+
+# Guardar los dispositivos encontrados en SQLite
+guardar_dispositivos(dispositivos, fecha_escaneo)
+
+# 6. Pausa final para revisar la pantalla antes de salir
+input("\n[📌] Presiona Enter para cerrar la aplicación...")
