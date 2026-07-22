@@ -24,16 +24,23 @@ The project was created as a proof of concept to explore packet capture, network
 # 🏗 Architecture
 
 ```text
-                    +----------------------+
-                    |      Main Thread     |
-                    |  UI + Statistics     |
-                    +----------+-----------+
-                               |
-                               |
-                    +----------v-----------+
-                    |    Sniffer Thread    |
-                    |  Scapy + Npcap       |
-                    +----------------------+
+                     +--------------------+
+                     |      main.py       |
+                     +----------+---------+
+                                |
+         +----------------------+----------------------+
+         |                      |                      |
+         |                      |                      |
++--------v-------+     +--------v-------+     +--------v-------+
+| Packet Capture |     |  ARP Scanner   |     |   Database     |
+| Scapy + DNS    |     | Device Detect  |     | SQLite         |
++--------+-------+     +--------+-------+     +--------+-------+
+         |                      |                      |
+         +----------------------+----------------------+
+                                |
+                     +----------v----------+
+                     |     Console UI      |
+                     +---------------------+
 ```
 
 Packet capturing runs in a dedicated thread while the main thread continuously updates the console and displays statistics, preventing UI blocking during high network traffic.
@@ -183,24 +190,29 @@ The current version focuses on validating the project's core idea. Future versio
 
 # 🗺 Roadmap
 
-## Version 1.0
+## 🗺 Roadmap
 
-- ✅ Real-time packet capture.
-- ✅ Network bandwidth monitoring.
-- ✅ DNS request detection.
-- ✅ Windows executable.
+### v1.0
 
-## Planned Features
+- ✅ Packet capture
+- ✅ DNS monitoring
+- ✅ Multithreading
+- ✅ Windows executable
 
-- [ ] SQLite session history.
-- [ ] Session statistics.
-- [ ] CSV export.
-- [ ] Interactive terminal UI with Rich.
-- [ ] Advanced DNS filtering.
-- [ ] Real-time charts.
-- [ ] Desktop GUI.
+### v1.2
 
----
+- ✅ SQLite persistence
+- ✅ ARP device discovery
+- ✅ Modular architecture
+
+### Upcoming
+
+- [ ] Session statistics
+- [ ] Device manufacturer detection (OUI lookup)
+- [ ] CSV export
+- [ ] Rich interactive interface
+- [ ] Historical charts
+- [ ] GUI
 
 # 🤝 Contributing
 
