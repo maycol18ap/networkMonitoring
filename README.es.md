@@ -24,16 +24,23 @@ Este proyecto nació como una prueba de concepto para aprender captura de paquet
 # 🏗 Arquitectura
 
 ```text
-                    +----------------------+
-                    |    Hilo Principal    |
-                    | UI + Estadísticas    |
-                    +----------+-----------+
-                               |
-                               |
-                    +----------v-----------+
-                    |   Hilo de Captura    |
-                    |  Scapy + Npcap       |
-                    +----------------------+
+                     +--------------------+
+                     |      main.py       |
+                     +----------+---------+
+                                |
+         +----------------------+----------------------+
+         |                      |                      |
+         |                      |                      |
++--------v-------+     +--------v-------+     +--------v-------+
+| Packet Capture |     |  ARP Scanner   |     |   Database     |
+| Scapy + DNS    |     | Device Detect  |     | SQLite         |
++--------+-------+     +--------+-------+     +--------+-------+
+         |                      |                      |
+         +----------------------+----------------------+
+                                |
+                     +----------v----------+
+                     |     Console UI      |
+                     +---------------------+
 ```
 
 La captura de paquetes se ejecuta en un hilo independiente mientras el hilo principal actualiza continuamente la consola y muestra las estadísticas, evitando bloqueos incluso cuando existe un alto tráfico de red.
@@ -177,22 +184,27 @@ La versión actual está enfocada en validar la idea principal del proyecto. En 
 
 # 🗺 Roadmap
 
-## Versión 1.0
+### v1.0
 
-- ✅ Captura de paquetes en tiempo real.
-- ✅ Monitoreo del consumo de red.
-- ✅ Detección de consultas DNS.
-- ✅ Ejecutable para Windows.
+- ✅ Captura de paquetes
+- ✅ Monitorización de DNS
+- ✅ Multihilo
+- ✅ Ejecutable para Windows
 
-## Próximas funcionalidades
+### v1.2
 
-- [ ] Historial de sesiones utilizando SQLite.
-- [ ] Estadísticas por sesión.
-- [ ] Exportación del historial a CSV.
-- [ ] Interfaz interactiva con Rich.
-- [ ] Filtros avanzados para dominios.
-- [ ] Gráficas de consumo.
-- [ ] Interfaz gráfica de escritorio.
+- ✅ Persistencia con SQLite
+- ✅ Descubrimiento de dispositivos mediante ARP
+- ✅ Arquitectura modular
+
+### Próximamente
+
+- [ ] Estadísticas de sesión
+- [ ] Detección del fabricante del dispositivo (consulta OUI)
+- [ ] Exportación a CSV
+- [ ] Interfaz interactiva avanzada
+- [ ] Gráficos históricos
+- [ ] Interfaz gráfica de usuario (GUI)
 
 ---
 
